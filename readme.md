@@ -136,6 +136,12 @@ Sapial is broadly divided into three parts:
     </br>
 
 
+    # run the Web client (second terminal)
+    cd /clients/web
+    yarn && yarn dev
+
+    # add OpenAI API keys to .env file
+
     Using cli 
 
     ```bash
