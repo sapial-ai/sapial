@@ -14,6 +14,12 @@ Sapial is broadly divided into three parts:
 3. **Client Interfaces**, that connect to the Deno runtime via local HTTP API
 
 
+## Table of contents
+
+- [Setup Sapial](#setup)
+- [Start building Sapial](#installation)
+- [Contributors guide](#contribution-guide)
+
 ## Setup
 1. ### Install [Deno](https://deno.com/runtime)
 
@@ -182,7 +188,7 @@ deno run --allow-all httpClient.ts
 
 To check if everything is working properly, type any prompt in the latter terminal
 
-![Checking if Sapial has been set up correctly](Sapial_CLI.gif)
+![Checking if Sapial has been set up correctly](./assets/images/Sapial_CLI.gif)
 
 
 ## Contribution guide ##
