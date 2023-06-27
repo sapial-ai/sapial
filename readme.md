@@ -34,6 +34,10 @@ Sapial is broadly divided into three parts:
     cd /clients/cli
     deno run --allow-all httpClient.ts
 
+    # run the Web client (second terminal)
+    cd /clients/web
+    yarn && yarn dev
+
     # add OpenAI API keys to .env file
 
 ```
