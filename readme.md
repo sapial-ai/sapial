@@ -3,13 +3,15 @@ Semi-Autonomous Personal Intelligent Agent from Large language models
 
 Sapial is a open framework for building personal agents that can be trained on your own data. It is built on top of [Deno](https://deno.land/), [Transforemrs](), [Langchain](), and [llama-index]().
 
-Why Deno? 
+Why **Deno**? 
+
+**Deno** is a secure, user-friendly runtime for JavaScript, TypeScript, and WebAssembly, built on V8, Rust, and Tokio. It supports TypeScript natively, provides built-in development tools, and accommodates existing npm modules. Distributed as a single executable, Deno doubles as both a runtime and package manager, using browser-compatible protocols for loading modules. It's an ideal environment for modern programming and a great alternative for utility scripts previously written in Bash or Python.
 
 ## Architecture
 Sapial is broadly divided into three parts:
-1. Python backend services, exposed over local FastAPI bridge
-2. Deno runtime (middleware), for running the agent
-3. Client Interfaces, that connect to the Deno runtime via local HTTP API
+1. **Python backend services**, exposed over local FastAPI bridge
+2. **Deno runtime (middleware)**, for running the agent
+3. **Client Interfaces**, that connect to the Deno runtime via local HTTP API
 
 
 ## Setup
@@ -182,7 +184,39 @@ To check if everything is working properly, type any prompt in the latter termin
 
 ![Checking if Sapial has been set up correctly](Sapial_CLI.gif)
 
-## Debug
+
+## Contribution guide ##
+We **appreciate** and **highly encourage** community contributions!
+
+1. ### Fork the repository (repo)
+    If you're not sure, here's how to [fork the repo](https://help.github.com/en/articles/fork-a-repo).
+
+2. ### Clone your fork 
+    To clone your repo, you can run the command in the terminal of your choice
+    ```bash
+    git clone git@github.com:[your_github_handle]/sapial.git && cd sapial
+    ```
+3. ### Make, commit and push changes
+    Create new branch and make changes
+    ```bash
+    git checkout -b new_branch_name
+    ```
+
+    Make changes where necessary and save them by running
+
+    ```bash
+    git add --all
+    git commit -m "Use a message that best describes changes"
+    ```
+
+    Push the changes to your repo
+    ```bash
+    git push
+    ```
+
+4. ### Propose changes by opening a PR
+    After your changes are committed to your GitHub fork, submit a pull request (PR) to the `main` branch of the `sapial-ai/sapial` repo
+## Debug ##
 Kill the fastAPI server on agent crash
 lsof -i :8000 -> <PID>
 kill -9 <PID>
@@ -197,8 +231,8 @@ kill -9 <PID>
 - share notes and repo with Andrew 
 
 ## Next Steps Planning
-- define personas
-- define personal alignment stratgies
+ - define personas
+ - define personal alignment stratgies
 
 ## Later
 - Refactor http server to be a class
