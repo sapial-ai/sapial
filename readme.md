@@ -45,8 +45,9 @@ lsof -i :8000 -> <PID>
 kill -9 <PID>
 
 ## Next Steps Implementation
-- add formatting to text
+- add logging
 - start implementing basic agent architectures 
+- add formatting to text
 - add a retriever using llama-index
 - tools and plugins
 

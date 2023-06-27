@@ -1,50 +1,23 @@
 
-// The history of the current conversatoin, up to the context length
-export class Memory {
-    contextSize: number;
-    conversatationSummarySize: number;
-    messageBufferSize: number;
-    store: Deno.Kv;
+// role for the agent, i.e. "You are a helpful AI assistant with an IQ of 115."
+export const role = `
+    --role--
+    You are a helpful AI assistant with an IQ of 120.
+    --role--
+    `;
 
-    constructor(store: Deno.Kv) {
-        this.contextSize = 4096;
-        this.conversatationSummarySize = 1024;
-        this.messageBufferSize = 2048;
-        this.store = store;
-    }
+export const guidelines = `
+    --guidelines--
+    Below is the latest message from your human:
+    Before responding, consider the prior conversaton above.
+    Let's think step-by-step, and explain our rationale for our response.
+    --guidelines--
+    `;
 
-    // add to chat log and 
-    async addMessage(message: string) {
-        // non blocking and atomic
-        await this.store.set(['logs'], [message]);
-        await this.store.set(['buffer'], [message]);
-    }
+// a human question and AI answer pair, i.e. "Q: What is the capital of France? A: Paris."
+export const messagePair = ``
 
-    // remove the last message from the buffer and add to summary
-    async summarize() {
-        // ensure summary is less than max
-        const summary = this.store.get(['summary'])
-            .then()
+// a summary of the conversation entire conversation
+export const summary = ``
 
-    }
-
-    // grab the summary and the message buffer and create a new message
-    async getHistory() {
-        const summary = await this.store.get(['summary']);
-        if (typeof(summary) === "string") {
-            return summary
-        } else {
-            return undefined
-        }
-    }
-
-
-}
-
-const conversationHistory = " ";
-
-
-const recentMessages = " ";
-
-
-
+export const prompt = ``
