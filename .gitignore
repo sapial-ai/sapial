@@ -115,3 +115,8 @@ dist
 
 # Deno directories
 deno_dir/
+
+#misc
+clients/.DS_Store
+clients/web/.DS_Store
+clients/web/app/.DS_Store
