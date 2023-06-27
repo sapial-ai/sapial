@@ -1,3 +1,8 @@
+![Static Badge](https://img.shields.io/badge/future_is-here-blue)
+![Static Badge](https://img.shields.io/badge/sapial-ai?label=SapialAI&link=https%3A%2F%2Fsapial.ai)
+![GitHub contributors](https://img.shields.io/github/contributors/sapial-ai/sapial?labelColor=purple)
+![GitHub last commit (branch)](https://img.shields.io/github/last-commit/sapial-ai/sapial/main)
+
 # Sapial
 Semi-Autonomous Personal Intelligent Agent from Large language models
 
