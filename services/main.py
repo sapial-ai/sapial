@@ -68,7 +68,7 @@ def stream(model: str, prompt: str):
 
 # call a model and return the full response
 @app.get("/chat/{model}/{prompt}")
-async def chat(model: str, prompt: str):
+def chat(model: str, prompt: str):
     chat = ChatOpenAI(temperature=0, model=model)
     response = chat.predict_messages([HumanMessage(content=prompt)])
     return {"message": response }
