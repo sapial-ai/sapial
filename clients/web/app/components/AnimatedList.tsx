@@ -13,33 +13,14 @@ const AnimatedList: FC<{ items: Message[] }> = ({ items }) => {
     );
   }, [items]);
 
-  //   const handleIntersection = (
-  //     entry: IntersectionObserverEntry,
-  //     item: Message
-  //   ) => {
-  //     if (!entry.isIntersecting) {
-  //       setVisibleItems((prevVisibleItems) =>
-  //         prevVisibleItems.filter((prevItem) => prevItem !== item)
-  //       );
-  //     }
-  //   };
-
   const handleIntersection = (
     entry: IntersectionObserverEntry,
     item: Message
   ) => {
     if (!entry.isIntersecting) {
-      setVisibleItems((prevVisibleItems) => {
-        const index = prevVisibleItems.findIndex(
-          (prevItem) => prevItem === item
-        );
-        if (index !== -1) {
-          const newVisibleItems = [...prevVisibleItems];
-          newVisibleItems.splice(index, 1);
-          return newVisibleItems;
-        }
-        return prevVisibleItems;
-      });
+      setVisibleItems((prevVisibleItems) =>
+        prevVisibleItems.filter((prevItem) => prevItem !== item)
+      );
     }
   };
 
