@@ -40,6 +40,7 @@ export class Sapial {
             const { readable, writable } = new TransformStream<Uint8Array>;
             const [responseReadable, localReadable] = readable.tee()
             streamingResponse.body!.pipeTo(writable);
+
             if (this.memory) {
                 this.streamToString(localReadable).then( async (AIMessage) => {
                     console.log(`AI response: ${AIMessage}`)
@@ -52,6 +53,63 @@ export class Sapial {
 
         serve(handler, { port: 4242 });
     }
+
+    /**
+     * 
+     * Summarization Feature
+     */
+    summarizeChatHistory() {
+        const chatBufferSize = this.chatBuffer.length;
+        const summarizerPrompt = ` //send over recent summary+messages to api call
+            ${this.getChatSummary()}
+            ${this.getRecentMessages()}
+            `;
+
+        console.log(`Summarizer prompt: ${summarizerPrompt}`);
+        
+        this.chatLLM(summarizerPrompt).then(async (summary) => { //.then specifies a return
+            console.log(`Chat Summary: ${summary}`)
+            this.chatSummary = summary;
+            await this.store.set(['summary'], summary); //sets variable in memory
+            this.chatBuffer.splice(0, chatBufferSize);
+        });
+    }
+
+    async chatLLM(prompt:string) { //moved prompting from JS to Python back-end 
+        const endpoint = `http://localhost:8000/chat/${prompt}`
+        const response = await fetch(endpoint);   //returns a string
+        const responseText = await response.text();
+        const responseString = responseText.toString();
+        return responseString;
+    }
+
+    // if summarizing, return the current summary
+    getChatSummary(): string {
+        const summary = `
+            Below is the current summary of the chat history with your human:
+            --summary--
+            ${this.chatSummary? this.chatSummary : `No history to summarize yet.`}
+            --summary--
+            `;
+        return this.summarizeChat ? summary : ``;
+    }
+
+    // if buffering, return the most recent (unsummarized) messages 
+    getRecentMessages(): string {
+        const recentMessages = `
+            Here are the most recent messages exchanged with your human:
+            --messages--
+            ${this.chatBuffer.join('\n')}
+            --messages--
+            `;
+
+        return this.bufferChat ? recentMessages : ``;
+    }
+
+    /**
+     * 
+     * Streaming & init features
+     */
 
     // create a new root sapial agent from a new config object
     public static async init(config: IConfig) {
@@ -104,59 +162,6 @@ export class Sapial {
         return messagePair
     }
 
-    // updates the chat summary with buffered messages
-    summarizeChatHistory() {
-
-        const summarizerPrompt = `
-            You are a helpful and insightful AI text summarizer with an IQ of 125.
-            You are able to summarize long conversations betweens humans and AI assistants.
-            Your goal is to summarize our entire conversation in a way that is both accurate and concise.
-            This summary will become the long-term memory of an AI assistant.
-
-            ${this.getChatSummary()}
-            ${this.getRecentMessages()}
-
-            Please extend the current summary based on our most recent messages.
-            Make sure to retain a summary of our full conversation history.
-            Ensure the summary is smaller than ${this.conversatationSummarySize} tokens
-            `;
-
-        console.log(`Summarizer prompt: ${summarizerPrompt}`);
-
-        const chatBufferSize = this.chatBuffer.length;
-        this.chatLLM(summarizerPrompt).then(async (summary) => {
-            console.log(`Chat Summary: ${summary}`)
-            this.chatSummary = summary;
-            await this.store.set(['summary'], summary);
-            this.chatBuffer.splice(0, chatBufferSize);
-        });
-    }
-
-    // if summarizing, return the current summary
-    getChatSummary(): string {
-
-        const summary = `
-            Below is the current summary of the chat history with your human:
-            --summary--
-            ${this.chatSummary? this.chatSummary : `No history to summarize yet.`}
-            --summary--
-            `;
-        return this.summarizeChat ? summary : ``;
-    }
-
-    // if buffering, return the most recent (unsummarized) messages 
-    getRecentMessages(): string {
-
-        const recentMessages = `
-            Here are the most recent messages exchanged with your human:
-            --messages--
-            ${this.chatBuffer.join('\n')}
-            --messages--
-            `;
-
-        return this.bufferChat ? recentMessages : ``;
-    }
-
     // add arbitrary context to a prompt (i.e. a conversation summary) before sending to a model
     injectContext(prompt: string) {
         const message = `
@@ -175,15 +180,5 @@ export class Sapial {
         const endpoint = `http://localhost:8000/stream/${model}/${prompt}`
         const response = await fetch(endpoint);
         return response
-    }
-
-    // call the model API service, and return the full response
-    async chatLLM(prompt: string) {
-        const model = this.secondaryModel;
-        const endpoint = `http://localhost:8000/chat/${model}/${prompt}`
-        const response = await fetch(endpoint);    
-        const json = await response.json();
-        const content = json.message.content;
-        return content;
     }
 }
