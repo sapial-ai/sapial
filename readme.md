@@ -1,7 +1,9 @@
 ![Static Badge](https://img.shields.io/badge/future_is-here-blue)
-![Static Badge](https://img.shields.io/badge/sapial-ai?label=SapialAI&link=https%3A%2F%2Fsapial.ai)
+[![Static Badge](https://img.shields.io/badge/sapial-ai?label=Website)](https://sapial-ai.github.io/)
+![GitHub Repo stars](https://img.shields.io/github/stars/sapial-ai/sapial)
 ![GitHub contributors](https://img.shields.io/github/contributors/sapial-ai/sapial?labelColor=purple)
 ![GitHub last commit (branch)](https://img.shields.io/github/last-commit/sapial-ai/sapial/main)
+[![Twitter Follow](https://img.shields.io/twitter/follow/rg3l3dr?style=social)](https://twitter.com/rg3l3dr)
 
 # Sapial
 Semi-Autonomous Personal Intelligent Agent from Large language models
@@ -135,11 +137,6 @@ Sapial is broadly divided into three parts:
     <summary>Windows</summary>
     </br>
 
-
-    # run the Web client (second terminal)
-    cd /clients/web
-    yarn && yarn dev
-
     # add OpenAI API keys to .env file
 
     Using cli 
@@ -190,6 +187,7 @@ To start an agent, run the following command in your terminal
 deno run --allow-all --unstable ./agents/alice.ts
 ```
 
+### Starting a client
 In a separate terminal, start the CLI client by running
 
 ```bash
@@ -199,8 +197,17 @@ deno run --allow-all httpClient.ts
 
 To check if everything is working properly, type any prompt in the latter terminal
 
-![Checking if Sapial has been set up correctly](./assets/images/Sapial_CLI.gif)
+![Checking if Sapial has been set up correctly](./assets/images/sapial_cli.gif)
 
+### Starting a web client
+
+Alternatively, you can start a web client to use a web interface
+To start a web client, run `yarn && yarn dev`   
+
+By default, the server will spin up on port 3000
+Proceed to `localhost:3000` and send a message to start interacting with AI
+
+![Web interface](./assets/images/web_interface.gif)
 
 ## Contribution guide ##
 We **appreciate** and **highly encourage** community contributions!
@@ -255,3 +262,11 @@ kill -9 <PID>
 ## Later
 - Refactor http server to be a class
 - Add authentication for agents and clients using LibP2P
+
+
+
+
+
+
+
+
