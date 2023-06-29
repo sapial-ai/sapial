@@ -1,0 +1,4 @@
+name: "Alice"
+primaryModel: "gpt-4"
+secondaryModel: "gpt-4"
+memory: true
