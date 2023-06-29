@@ -1,16 +1,29 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useChat } from "ai/react";
+
 import UserIcon from "./components/icons/UserIcon";
 import OpenAiIcon from "./components/icons/OpenAiIcon";
 import PaperAirplaneIcon from "./components/icons/PaperAirplaneIcon";
 
 export default function Chat() {
+  const messageRef = useRef<HTMLDivElement>(null);
   const { messages, input, handleInputChange, handleSubmit } = useChat();
 
+  useEffect(() => {
+    if (messageRef.current) {
+      messageRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "end",
+        inline: "nearest",
+      });
+    }
+  }, [messages]);
+
   return (
-    <div className="flex flex-col w-full gap-10 py-24">
-      <div className="flex-grow flex flex-col gap-3">
+    <div className="flex flex-col w-full gap-10 py-24" ref={messageRef}>
+      <div className="flex-grow flex flex-col gap-3 mb-10">
         {messages.length > 0
           ? messages.map((m) => {
               const additionalStyles =

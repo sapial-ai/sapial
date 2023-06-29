@@ -16,8 +16,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <main>
-          <div className="justify-center grow container px-24 mx-auto">
+        <main className="w-full  min-h-screen">
+          <div className="justify-center container px-24 mx-auto">
             {children}
           </div>
         </main>
