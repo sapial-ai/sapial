@@ -2,6 +2,8 @@ import { IConfig } from "./interfaces.ts";
 import * as proc from "https://deno.land/x/proc@0.20.28/mod3.ts";
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { guidelines, role } from "./runtime/prompts/prompts.ts";
+import fs from 'node:fs';
+import YAML from 'yaml';
 // import { estimateTokens } from "./runtime/utils/utils.ts";
 
 export class Sapial {
@@ -55,7 +57,7 @@ export class Sapial {
 
     // create a new root sapial agent from a new config object
     public static async init(config: IConfig) {
-
+        console.log("being called")
         // start the uvicron API server for python services
         proc.run("bash", "run.sh");    
         console.log("Started API service");
@@ -185,5 +187,48 @@ export class Sapial {
         const json = await response.json();
         const content = json.message.content;
         return content;
+    }
+
+    public static async get_config() {
+        const yaml_config = YAML.parse(fs.readFileSync('./config.yml', 'utf8'))
+        const config: IConfig = {
+            name: yaml_config.name,
+            primaryModel: yaml_config.primaryModel,
+            secondaryModel: yaml_config.secondaryModel,
+            memory: yaml_config.memory,
+        }
+        return config
+    }
+
+    async spawnAgent(config: IConfig, objective: string): Promise<string | void>{
+        const objective_prompt = 
+        `You are an AI task planning agent that creates new tasks based on the following objective:
+         ${objective}.
+	    As a planning agent, diving objective into separate subtasks and order them properly 
+        to ensure that objective is reached correctly. 
+	    Return the task list as a JavaScript-like array.`
+
+        const model = this.secondaryModel;
+        const endpoint = `http://localhost:8000/chat/${model}/${objective_prompt}`;
+      
+
+        try{
+            const response = await fetch(endpoint); 
+            const {message} = await response.json();
+            const list_of_tasks = JSON.parse(message.content);
+            // for the speed, we will use only first two tasks from the list 
+            const list_of_tasks_for_testins=[list_of_tasks[0], list_of_tasks[1]]
+            let summary = "";
+        
+            await Promise.all(list_of_tasks_for_testins.map(async (task: string, i: number) => {
+                const task_solution = await this.chatLLM(task);
+                summary += `Step${i+1} - ${task_solution}, `;
+            }));
+            console.log('summary', summary);
+            return summary; 
+        }catch(e){
+            console.log(e);
+        }
+      
     }
 }
