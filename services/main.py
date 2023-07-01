@@ -21,6 +21,8 @@ from langchain.prompts import PromptTemplate
 from langchain.llms import OpenAI
 import guardrails as gd
 
+from retrievers.services import embed_data, retrieve_query
+
 load_dotenv() #loads code from env file
 app = FastAPI() #simple app
 
@@ -63,10 +65,22 @@ class StreamRequest(BaseModel):
     """Request body for streaming."""
     message: str
 
-# ensure the API is working
+#ensure the API is working
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
+
+#call a model and stream the response back
+@app.get("/stream/{model}/{prompt}")
+def stream(model: str, prompt: str):
+    return StreamingResponse(send_message(prompt, model), media_type="text/event-stream")
+    
+# call a model and return the full response
+@app.get("/chat/{model}/{prompt}")
+def chat(model: str, prompt: str):
+    chat = ChatOpenAI(temperature=0, model=model)
+    response = chat.predict_messages([HumanMessage(content=prompt)])
+    return {"message": response }
 
 #Start of GuardRails Summary Integration 
 #Moved summary feature to back-end
@@ -75,7 +89,7 @@ rail_str = """
     <rail version="0.1">
 
     <output>
-    <string name="summary"/>
+    <string name="summary">
     </output>
     
     <prompt>
@@ -86,7 +100,7 @@ rail_str = """
 
     Please extend the current summary based on our most recent messages.
     Make sure to retain a summary of our full conversation history.
-    Please summarize it to the length of 2 sentences
+    Please summarize it to one sentence
     
     {{user_prompt}}
 
@@ -95,9 +109,9 @@ rail_str = """
     </rail>
 """
 #@app.get("/chat/{prompt}/{template_context}"), possible next step
-# call a model and return the full response
-@app.get("/chat/{prompt}") #removed model string parameter
-async def chat(prompt: str):  
+#guardrails API call 
+@app.get("/guard_chat/{prompt}") #removed model string parameter
+async def guard_chat(prompt: str):  
     #Creates guard object 
     output_parser = GuardrailsOutputParser.from_rail_string(rail_str)
 
@@ -114,13 +128,27 @@ async def chat(prompt: str):
 
     #format
     format_output = output_parser.parse(output)
-    return {"message": format_output}
+    #return {"message": output}
+    return format_output
 
-#call a model and stream the response back
-@app.get("/stream/{model}/{prompt}")
-def stream(model: str, prompt: str):
-    return StreamingResponse(send_message(prompt, model), media_type="text/event-stream")
-    
+
+#start of llama API calls
+
+#Call Embed function from services.py
+# @app.get("/chat/{data}")
+# async def embed(data:str):
+#     index = embed_data(data)
+#     return {"index": index}
+
+
+#Call Retrieve Function from services.py
+@app.get("/llama/{prompt}")
+async def query(prompt:str):
+    index = embed_data('services/data') #call embed function from services.py 
+    query = retrieve_query(prompt, index)
+    return {"query": query}
+
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000, log_level="debug")
 

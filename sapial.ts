@@ -18,6 +18,7 @@ export class Sapial {
     private readonly messageBufferSize = 4_096;
     private store: Deno.Kv;
 
+    //original
     constructor(config: IConfig, store: Deno.Kv ) {
         this.name = config.name;
         this.primaryModel = config.primaryModel;
@@ -36,6 +37,7 @@ export class Sapial {
             console.log(`Human message: ${humanMessage}`);
             const humanMessageWithContext = this.injectContext(humanMessage);
             console.log(`Human message with context: ${humanMessageWithContext}`);
+            
             const streamingResponse = await this.streamLLM(humanMessageWithContext);
             const { readable, writable } = new TransformStream<Uint8Array>;
             const [responseReadable, localReadable] = readable.tee()
@@ -54,62 +56,6 @@ export class Sapial {
         serve(handler, { port: 4242 });
     }
 
-    /**
-     * 
-     * Summarization Feature
-     */
-    summarizeChatHistory() {
-        const chatBufferSize = this.chatBuffer.length;
-        const summarizerPrompt = ` //send over recent summary+messages to api call
-            ${this.getChatSummary()}
-            ${this.getRecentMessages()}
-            `;
-
-        console.log(`Summarizer prompt: ${summarizerPrompt}`);
-        
-        this.chatLLM(summarizerPrompt).then(async (summary) => { //.then specifies a return
-            console.log(`Chat Summary: ${summary}`)
-            this.chatSummary = summary;
-            await this.store.set(['summary'], summary); //sets variable in memory
-            this.chatBuffer.splice(0, chatBufferSize);
-        });
-    }
-
-    async chatLLM(prompt:string) { //moved prompting from JS to Python back-end 
-        const endpoint = `http://localhost:8000/chat/${prompt}`
-        const response = await fetch(endpoint);   //returns a string
-        const responseText = await response.text();
-        const responseString = responseText.toString();
-        return responseString;
-    }
-
-    // if summarizing, return the current summary
-    getChatSummary(): string {
-        const summary = `
-            Below is the current summary of the chat history with your human:
-            --summary--
-            ${this.chatSummary? this.chatSummary : `No history to summarize yet.`}
-            --summary--
-            `;
-        return this.summarizeChat ? summary : ``;
-    }
-
-    // if buffering, return the most recent (unsummarized) messages 
-    getRecentMessages(): string {
-        const recentMessages = `
-            Here are the most recent messages exchanged with your human:
-            --messages--
-            ${this.chatBuffer.join('\n')}
-            --messages--
-            `;
-
-        return this.bufferChat ? recentMessages : ``;
-    }
-
-    /**
-     * 
-     * Streaming & init features
-     */
 
     // create a new root sapial agent from a new config object
     public static async init(config: IConfig) {
@@ -141,9 +87,9 @@ export class Sapial {
         }
     }
 
+
     // adds a new message exchange to the chat buffer and logs
     async addMessagePairToBuffer(humanMessage: string, AIMessage: string) {
-
         const messagePair = `
             --human-message--
             ${humanMessage}
@@ -162,6 +108,58 @@ export class Sapial {
         return messagePair
     }
 
+
+    // updates the chat summary with buffered messages
+    summarizeChatHistory() {
+
+        const summarizerPrompt = `
+            You are a helpful and insightful AI text summarizer with an IQ of 125.
+            You are able to summarize long conversations betweens humans and AI assistants.
+            Your goal is to summarize our entire conversation in a way that is both accurate and concise.
+            This summary will become the long-term memory of an AI assistant.
+
+            ${this.getChatSummary()}
+            ${this.getRecentMessages()}
+
+            Please extend the current summary based on our most recent messages.
+            Make sure to retain a summary of our full conversation history.
+            Ensure the summary is smaller than ${this.conversatationSummarySize} tokens
+            `;
+
+        console.log(`Summarizer prompt: ${summarizerPrompt}`);
+
+        const chatBufferSize = this.chatBuffer.length;
+        this.chatLLM(summarizerPrompt).then(async (summary) => {
+            console.log(`Chat Summary: ${summary}`)
+            this.chatSummary = summary;
+            await this.store.set(['summary'], summary);
+            this.chatBuffer.splice(0, chatBufferSize);
+        });
+    }
+
+    // if summarizing, return the current summary
+    getChatSummary(): string {
+        const summary = `
+            Below is the current summary of the chat history with your human:
+            --summary--
+            ${this.chatSummary? this.chatSummary : `No history to summarize yet.`}
+            --summary--
+            `;
+        return this.summarizeChat ? summary : ``;
+    }
+
+    // if buffering, return the most recent (unsummarized) messages 
+    getRecentMessages(): string {
+        const recentMessages = `
+            Here are the most recent messages exchanged with your human:
+            --messages--
+            ${this.chatBuffer.join('\n')}
+            --messages--
+            `;
+
+        return this.bufferChat ? recentMessages : ``;
+    }
+
     // add arbitrary context to a prompt (i.e. a conversation summary) before sending to a model
     injectContext(prompt: string) {
         const message = `
@@ -174,11 +172,133 @@ export class Sapial {
         return message;
     }
 
-    // call the model API service and stream the response
+     // call the model API service and stream the response
     async streamLLM(prompt: string) {
         const model = this.primaryModel;
         const endpoint = `http://localhost:8000/stream/${model}/${prompt}`
         const response = await fetch(endpoint);
         return response
     }
+
+    // call the model API service, and return the full response
+    async chatLLM(prompt: string) {
+        const model = this.secondaryModel;
+        const endpoint = `http://localhost:8000/chat/${model}/${prompt}`
+        const response = await fetch(endpoint);    
+        const json = await response.json();
+        const content = json.message.content;
+        return content;
+    }
+
+    //GuardRails Summarization Feature
+    async guard_summarizeChatHistory() {
+        const chatBufferSize = this.chatBuffer.length;
+        const summarizerPrompt = ` 
+            ${this.getChatSummary()}
+            ${this.getRecentMessages()}
+            `;
+ 
+        console.log(`Summarizer prompt: ${summarizerPrompt}`);
+        
+        this.guard_chatLLM(summarizerPrompt).then(async (summary) => { //.then specifies a return
+            console.log(`Chat Summary: ${summary}`)
+            this.chatSummary = summary;
+            await this.store.set(['summary'], summary); //sets variable in memory
+            this.chatBuffer.splice(0, chatBufferSize);
+        });
+    }
+ 
+    async guard_chatLLM(prompt:string) { //moved prompting from JS to Python back-end 
+        const endpoint = `http://localhost:8000/guard_chat/${prompt}`
+        const response = await fetch(endpoint);   //returns a string
+        const responseText = await response.text();
+        const responseString = responseText.toString();
+        return responseString;
+        //return responseText;
+    }
+ 
+    //constructor for guard implementation, one different function call, guard_summarizeChatHistory()
+    //    constructor(config: IConfig, store: Deno.Kv ) {
+    //     this.name = config.name;
+    //     this.primaryModel = config.primaryModel;
+    //     this.secondaryModel = config.secondaryModel;
+    //     this.memory = config.memory;
+    //     this.store = store; 
+                
+    //     if (config.memory) {
+    //         this.summarizeChat = true;
+    //         this.bufferChat = true;
+    //     }
+    
+    //     // setup the proxy server
+    //     const handler = async (request: Request) => {
+    //         const humanMessage = await request.text();
+    //         console.log(`Human message: ${humanMessage}`);
+    //         const humanMessageWithContext = this.injectContext(humanMessage);
+    //         console.log(`Human message with context: ${humanMessageWithContext}`);
+    //         const streamingResponse = await this.streamLLM(humanMessageWithContext);
+    //         const { readable, writable } = new TransformStream<Uint8Array>;
+    //         const [responseReadable, localReadable] = readable.tee()
+    //         streamingResponse.body!.pipeTo(writable);
+    
+    //         if (this.memory) {
+    //             this.streamToString(localReadable).then( async (AIMessage) => {
+    //                 console.log(`AI response: ${AIMessage}`)
+    //                 await this.addMessagePairToBuffer(humanMessage, AIMessage);
+    //                 this.guard_summarizeChatHistory()       
+    //             });
+    //         }
+    //         return new Response(responseReadable);
+    //     };
+    //     serve(handler, { port: 4242 });
+    // }
+
+
+
+    /*
+    Llama, Pine-cone, OpenAI embedding implementation
+    */
+    
+    //Embed Documents
+    //this func does not work, problems with sending over a GPTVectorStoreIndex over API call
+    async embed(prompt: string) {
+        const endpoint = `http://localhost:8000/chat/{data}` 
+        const response = await fetch(endpoint);
+        return response
+    }
+
+    //Sends query to back-end
+    async query(prompt: string) {
+        const endpoint = `http://localhost:8000/llama/${prompt}`
+        const response = await fetch(endpoint);
+        const responseText = await response.text();
+        const responseString = responseText.toString();
+        return responseString;
+    }
+
+    //constructor for llama-implementation
+    // constructor(config: IConfig, store: Deno.Kv ) {
+    //     this.name = config.name;
+    //     this.primaryModel = config.primaryModel;
+    //     this.secondaryModel = config.secondaryModel;
+    //     this.memory = config.memory;
+    //     this.store = store; 
+                
+    //     if (config.memory) {
+    //         this.summarizeChat = true;
+    //         this.bufferChat = true;
+    //     }
+
+    //     // setup the proxy server
+    //     const handler = async (request: Request) => {
+    //         const humanMessage = await request.text();
+    //         console.log(`Human message: ${humanMessage}`);
+    //         const streamingResponse = await this.query(humanMessage);
+    //         console.log(`AI response: ${streamingResponse}`)
+    //     };
+
+    //     serve(handler, { port: 4242 });
+    // }
+
+   
 }
