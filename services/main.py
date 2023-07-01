@@ -15,8 +15,16 @@ from langchain.schema import (
     SystemMessage
 )
 
-load_dotenv()
-app = FastAPI()
+from rich import print
+from langchain.output_parsers import GuardrailsOutputParser
+from langchain.prompts import PromptTemplate
+from langchain.llms import OpenAI
+import guardrails as gd
+
+from retrievers.services import embed_data, retrieve_query
+
+load_dotenv() #loads code from env file
+app = FastAPI() #simple app
 
 # from https://gist.github.com/ninely/88485b2e265d852d3feb8bd115065b1a
 # see also https://github.com/hwchase17/langchain/discussions/1706
@@ -52,27 +60,95 @@ async def send_message(message: str, model: str) -> AsyncIterable[str]:
 
     await task
 
+#pydantic class 
 class StreamRequest(BaseModel):
     """Request body for streaming."""
     message: str
 
-# ensure the API is working
+#ensure the API is working
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
 
-# # call a model and stream the response back
+#call a model and stream the response back
 @app.get("/stream/{model}/{prompt}")
 def stream(model: str, prompt: str):
     return StreamingResponse(send_message(prompt, model), media_type="text/event-stream")
-
+    
 # call a model and return the full response
 @app.get("/chat/{model}/{prompt}")
 def chat(model: str, prompt: str):
     chat = ChatOpenAI(temperature=0, model=model)
     response = chat.predict_messages([HumanMessage(content=prompt)])
     return {"message": response }
+
+#Start of GuardRails Summary Integration 
+#Moved summary feature to back-end
+#open to token specifications & improved RailSpec
+rail_str = """
+    <rail version="0.1">
+
+    <output>
+    <string name="summary">
+    </output>
     
+    <prompt>
+    You are a helpful and insightful AI text summarizer with an IQ of 125.
+    You are able to summarize the given prompt below betweens humans and AI assistants.
+    Your goal is to summarize our entire conversation in a way that is both accurate and concise.
+    This summary will become the long-term memory of an AI assistant.
+
+    Please extend the current summary based on our most recent messages.
+    Make sure to retain a summary of our full conversation history.
+    Please summarize it to one sentence
+    
+    {{user_prompt}}
+
+    @complete_json_suffix_v2
+    </prompt>
+    </rail>
+"""
+#@app.get("/chat/{prompt}/{template_context}"), possible next step
+#guardrails API call 
+@app.get("/guard_chat/{prompt}") #removed model string parameter
+async def guard_chat(prompt: str):  
+    #Creates guard object 
+    output_parser = GuardrailsOutputParser.from_rail_string(rail_str)
+
+    #LangChain Call
+    guard_prompt = PromptTemplate(
+        template=output_parser.guard.base_prompt,
+        input_variables=output_parser.guard.prompt.variable_names,
+    )
+    #model call 
+    model_guard = OpenAI(temperature=0)
+
+    #return a string 
+    output = model_guard(guard_prompt.format_prompt(user_prompt = prompt).to_string())
+
+    #format
+    format_output = output_parser.parse(output)
+    #return {"message": output}
+    return format_output
+
+
+#start of llama API calls
+
+#Call Embed function from services.py
+# @app.get("/chat/{data}")
+# async def embed(data:str):
+#     index = embed_data(data)
+#     return {"index": index}
+
+
+#Call Retrieve Function from services.py
+@app.get("/llama/{prompt}")
+async def query(prompt:str):
+    index = embed_data('services/data') #call embed function from services.py 
+    query = retrieve_query(prompt, index)
+    return {"query": query}
+
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000, log_level="debug")
 
