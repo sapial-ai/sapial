@@ -2,8 +2,6 @@ import { IConfig } from "./interfaces.ts";
 import * as proc from "https://deno.land/x/proc@0.20.28/mod3.ts";
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { guidelines, role } from "./runtime/prompts/prompts.ts";
-import fs from 'node:fs';
-import YAML from 'yaml';
 // import { estimateTokens } from "./runtime/utils/utils.ts";
 
 export class Sapial {
@@ -61,7 +59,7 @@ export class Sapial {
 
     // create a new root sapial agent from a new config object
     public static async init(config: IConfig) {
-        console.log("being called")
+
         // start the uvicron API server for python services
         proc.run("bash", "run.sh");    
         console.log("Started API service");
@@ -191,4 +189,116 @@ export class Sapial {
         const content = json.message.content;
         return content;
     }
+
+    //GuardRails Summarization Feature
+    async guard_summarizeChatHistory() {
+        const chatBufferSize = this.chatBuffer.length;
+        const summarizerPrompt = ` 
+            ${this.getChatSummary()}
+            ${this.getRecentMessages()}
+            `;
+ 
+        console.log(`Summarizer prompt: ${summarizerPrompt}`);
+        
+        this.guard_chatLLM(summarizerPrompt).then(async (summary) => { //.then specifies a return
+            console.log(`Chat Summary: ${summary}`)
+            this.chatSummary = summary;
+            await this.store.set(['summary'], summary); //sets variable in memory
+            this.chatBuffer.splice(0, chatBufferSize);
+        });
+    }
+ 
+    async guard_chatLLM(prompt:string) { //moved prompting from JS to Python back-end 
+        const endpoint = `http://localhost:8000/guard_chat/${prompt}`
+        const response = await fetch(endpoint);   //returns a string
+        const responseText = await response.text();
+        const responseString = responseText.toString();
+        return responseString;
+        //return responseText;
+    }
+ 
+    //constructor for guard implementation, one different function call, guard_summarizeChatHistory()
+    //    constructor(config: IConfig, store: Deno.Kv ) {
+    //     this.name = config.name;
+    //     this.primaryModel = config.primaryModel;
+    //     this.secondaryModel = config.secondaryModel;
+    //     this.memory = config.memory;
+    //     this.store = store; 
+                
+    //     if (config.memory) {
+    //         this.summarizeChat = true;
+    //         this.bufferChat = true;
+    //     }
+    
+    //     // setup the proxy server
+    //     const handler = async (request: Request) => {
+    //         const humanMessage = await request.text();
+    //         console.log(`Human message: ${humanMessage}`);
+    //         const humanMessageWithContext = this.injectContext(humanMessage);
+    //         console.log(`Human message with context: ${humanMessageWithContext}`);
+    //         const streamingResponse = await this.streamLLM(humanMessageWithContext);
+    //         const { readable, writable } = new TransformStream<Uint8Array>;
+    //         const [responseReadable, localReadable] = readable.tee()
+    //         streamingResponse.body!.pipeTo(writable);
+    
+    //         if (this.memory) {
+    //             this.streamToString(localReadable).then( async (AIMessage) => {
+    //                 console.log(`AI response: ${AIMessage}`)
+    //                 await this.addMessagePairToBuffer(humanMessage, AIMessage);
+    //                 this.guard_summarizeChatHistory()       
+    //             });
+    //         }
+    //         return new Response(responseReadable);
+    //     };
+    //     serve(handler, { port: 4242 });
+    // }
+
+
+
+    /*
+    Llama, Pine-cone, OpenAI embedding implementation
+    */
+    
+    //Embed Documents
+    //this func does not work, problems with sending over a GPTVectorStoreIndex over API call
+    async embed(prompt: string) {
+        const endpoint = `http://localhost:8000/chat/{data}` 
+        const response = await fetch(endpoint);
+        return response
+    }
+
+    //Sends query to back-end
+    async query(prompt: string) {
+        const endpoint = `http://localhost:8000/llama/${prompt}`
+        const response = await fetch(endpoint);
+        const responseText = await response.text();
+        const responseString = responseText.toString();
+        return responseString;
+    }
+
+    //constructor for llama-implementation
+    // constructor(config: IConfig, store: Deno.Kv ) {
+    //     this.name = config.name;
+    //     this.primaryModel = config.primaryModel;
+    //     this.secondaryModel = config.secondaryModel;
+    //     this.memory = config.memory;
+    //     this.store = store; 
+                
+    //     if (config.memory) {
+    //         this.summarizeChat = true;
+    //         this.bufferChat = true;
+    //     }
+
+    //     // setup the proxy server
+    //     const handler = async (request: Request) => {
+    //         const humanMessage = await request.text();
+    //         console.log(`Human message: ${humanMessage}`);
+    //         const streamingResponse = await this.query(humanMessage);
+    //         console.log(`AI response: ${streamingResponse}`)
+    //     };
+
+    //     serve(handler, { port: 4242 });
+    // }
+
+   
 }
