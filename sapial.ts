@@ -191,4 +191,157 @@ export class Sapial {
         const content = json.message.content;
         return content;
     }
+
+    public static async get_config() {
+        const yaml_config = YAML.parse(fs.readFileSync('./config.yml', 'utf8'))
+        const config: IConfig = {
+            name: yaml_config.name,
+            primaryModel: yaml_config.primaryModel,
+            secondaryModel: yaml_config.secondaryModel,
+            memory: yaml_config.memory,
+        }
+        return config
+    }
+
+    async spawnAgent(config: IConfig, objective: string): Promise<string | void>{
+        const objective_prompt = 
+        `You are an AI task planning agent that creates new tasks based on the following objective:
+         ${objective}.
+	    As a planning agent, diving objective into separate subtasks and order them properly 
+        to ensure that objective is reached correctly. 
+	    Return the task list as a JavaScript-like array.`
+
+        const model = this.secondaryModel;
+        const endpoint = `http://localhost:8000/chat/${model}/${objective_prompt}`;
+      
+
+        try{
+            const response = await fetch(endpoint); 
+            const {message} = await response.json();
+            const list_of_tasks = JSON.parse(message.content);
+            // for the speed, we will use only first two tasks from the list 
+            const list_of_tasks_for_testins=[list_of_tasks[0], list_of_tasks[1]]
+            let summary = "";
+        
+            await Promise.all(list_of_tasks_for_testins.map(async (task: string, i: number) => {
+                const task_solution = await this.chatLLM(task);
+                summary += `Step${i+1} - ${task_solution}, `;
+            }));
+            console.log('summary', summary);
+            return summary; 
+        }catch(e){
+            console.log(e);
+        }
+      
+    }
+
+    //GuardRails Summarization Feature
+    async guard_summarizeChatHistory() {
+        const chatBufferSize = this.chatBuffer.length;
+        const summarizerPrompt = ` 
+            ${this.getChatSummary()}
+            ${this.getRecentMessages()}
+            `;
+ 
+        console.log(`Summarizer prompt: ${summarizerPrompt}`);
+        
+        this.guard_chatLLM(summarizerPrompt).then(async (summary) => { //.then specifies a return
+            console.log(`Chat Summary: ${summary}`)
+            this.chatSummary = summary;
+            await this.store.set(['summary'], summary); //sets variable in memory
+            this.chatBuffer.splice(0, chatBufferSize);
+        });
+    }
+ 
+    async guard_chatLLM(prompt:string) { //moved prompting from JS to Python back-end 
+        const endpoint = `http://localhost:8000/guard_chat/${prompt}`
+        const response = await fetch(endpoint);   //returns a string
+        const responseText = await response.text();
+        const responseString = responseText.toString();
+        return responseString;
+        //return responseText;
+    }
+ 
+    //constructor for guard implementation, one different function call, guard_summarizeChatHistory()
+    //    constructor(config: IConfig, store: Deno.Kv ) {
+    //     this.name = config.name;
+    //     this.primaryModel = config.primaryModel;
+    //     this.secondaryModel = config.secondaryModel;
+    //     this.memory = config.memory;
+    //     this.store = store; 
+                
+    //     if (config.memory) {
+    //         this.summarizeChat = true;
+    //         this.bufferChat = true;
+    //     }
+    
+    //     // setup the proxy server
+    //     const handler = async (request: Request) => {
+    //         const humanMessage = await request.text();
+    //         console.log(`Human message: ${humanMessage}`);
+    //         const humanMessageWithContext = this.injectContext(humanMessage);
+    //         console.log(`Human message with context: ${humanMessageWithContext}`);
+    //         const streamingResponse = await this.streamLLM(humanMessageWithContext);
+    //         const { readable, writable } = new TransformStream<Uint8Array>;
+    //         const [responseReadable, localReadable] = readable.tee()
+    //         streamingResponse.body!.pipeTo(writable);
+    
+    //         if (this.memory) {
+    //             this.streamToString(localReadable).then( async (AIMessage) => {
+    //                 console.log(`AI response: ${AIMessage}`)
+    //                 await this.addMessagePairToBuffer(humanMessage, AIMessage);
+    //                 this.guard_summarizeChatHistory()       
+    //             });
+    //         }
+    //         return new Response(responseReadable);
+    //     };
+    //     serve(handler, { port: 4242 });
+    // }
+
+
+
+    /*
+    Llama, Pine-cone, OpenAI embedding implementation
+    */
+    
+    //Embed Documents
+    //this func does not work, problems with sending over a GPTVectorStoreIndex over API call
+    async embed(prompt: string) {
+        const endpoint = `http://localhost:8000/chat/{data}` 
+        const response = await fetch(endpoint);
+        return response
+    }
+
+    //Sends query to back-end
+    async query(prompt: string) {
+        const endpoint = `http://localhost:8000/llama/${prompt}`
+        const response = await fetch(endpoint);
+        const responseText = await response.text();
+        const responseString = responseText.toString();
+        return responseString;
+    }
+
+    //constructor for llama-implementation
+    // constructor(config: IConfig, store: Deno.Kv ) {
+    //     this.name = config.name;
+    //     this.primaryModel = config.primaryModel;
+    //     this.secondaryModel = config.secondaryModel;
+    //     this.memory = config.memory;
+    //     this.store = store; 
+                
+    //     if (config.memory) {
+    //         this.summarizeChat = true;
+    //         this.bufferChat = true;
+    //     }
+
+    //     // setup the proxy server
+    //     const handler = async (request: Request) => {
+    //         const humanMessage = await request.text();
+    //         console.log(`Human message: ${humanMessage}`);
+    //         const streamingResponse = await this.query(humanMessage);
+    //         console.log(`AI response: ${streamingResponse}`)
+    //     };
+
+    //     serve(handler, { port: 4242 });
+    // }
 }
