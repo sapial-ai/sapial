@@ -155,11 +155,22 @@ Sapial is broadly divided into three parts:
     To use venv in your project, change directory into `services` by running
     `cd services`
 
-    nd then run `python -m venv venv`
+    And then run `python -m venv venv`
 
-    This will create a vurtual environment inside `services` folder named `venv`
+    This will create a virtual environment inside `services` folder named `venv`
 
-    run `cd ..` in your terminal to get back to the root folder
+    Activate the new virtual environment using the following command:
+
+    ```bash
+    source venv/bin/activate  # On Unix-based systems
+    ```
+    or
+
+    ```bash
+    .\venv\Scripts\activate  # On Windows
+    ```
+
+    Run `cd ..` in your terminal to get back to the root folder
 
 
 5. ### Install Python Dependencies 
@@ -202,7 +213,13 @@ To check if everything is working properly, type any prompt in the latter termin
 ### Starting a web client
 
 Alternatively, you can start a web client to use a web interface
-To start a web client, run `yarn && yarn dev`   
+
+To start a web client, run 
+
+```bash
+cd /clients/web
+yarn && yarn dev
+```
 
 By default, the server will spin up on port 3000
 Proceed to `localhost:3000` and send a message to start interacting with AI
